@@ -2,8 +2,9 @@ package fixed
 
 import (
 	"errors"
-	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 var (
@@ -11,7 +12,7 @@ var (
 	ErrOverflow = errors.New("buffer number overflow")
 )
 
-var iovecSize = int(unsafe.Sizeof(syscall.Iovec{}))
+var iovecSize = int(unsafe.Sizeof(unix.Iovec{}))
 
 type allocator struct {
 	max        int // max number of buffers
@@ -27,20 +28,20 @@ type allocator struct {
 }
 
 func (a *allocator) init() error {
-	prot := syscall.PROT_READ | syscall.PROT_WRITE
-	flags := syscall.MAP_ANON | syscall.MAP_PRIVATE
+	prot := unix.PROT_READ | unix.PROT_WRITE
+	flags := unix.MAP_ANON | unix.MAP_PRIVATE
 	size := a.bufferSize * a.max
-	mem, err := syscall.Mmap(-1, 0, size, prot, flags)
+	mem, err := unix.Mmap(-1, 0, size, prot, flags)
 	if err != nil {
 		return err
 	}
 	a.mem = mem
-	iovec := []syscall.Iovec{{Base: &mem[0], Len: uint64(size)}}
+	iovec := []unix.Iovec{{Base: &mem[0], Len: uint64(size)}}
 	return a.reg.RegisterBuffers(iovec)
 }
 
 func (a *allocator) close() error {
-	return syscall.Munmap(a.mem)
+	return unix.Munmap(a.mem)
 }
 
 func (a *allocator) bufAt(pos int) []byte {

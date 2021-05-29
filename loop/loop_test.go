@@ -3,7 +3,6 @@ package loop
 import (
 	"runtime"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 	"unsafe"
@@ -236,7 +235,7 @@ func TestTimeoutNoOverwrite(t *testing.T) {
 			uring.Timeout(sqe, &ts, false, 0)
 		}, uintptr(unsafe.Pointer(&ts)))
 		require.NoError(t, err)
-		require.Equal(t, syscall.ETIME, syscall.Errno(-cqe.Result()))
+		require.Equal(t, unix.ETIME, unix.Errno(-cqe.Result()))
 		close(tchan)
 	}()
 	for i := 0; i < 100; i++ {
@@ -275,7 +274,7 @@ func TestLinkedBatch(t *testing.T) {
 	case <-time.After(time.Second):
 		require.FailNow(t, "failed to interrupt waiter")
 	case cqes := <-result:
-		assert.Equal(t, syscall.ECANCELED.Error(), syscall.Errno(-cqes[0].Result()).Error())
-		assert.Equal(t, syscall.ETIME.Error(), syscall.Errno(-cqes[1].Result()).Error())
+		assert.Equal(t, unix.ECANCELED.Error(), unix.Errno(-cqes[0].Result()).Error())
+		assert.Equal(t, unix.ETIME.Error(), unix.Errno(-cqes[1].Result()).Error())
 	}
 }

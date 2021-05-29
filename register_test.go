@@ -3,11 +3,11 @@ package uring
 import (
 	"io/ioutil"
 	"os"
-	"syscall"
 	"testing"
 	"unsafe"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 )
 
 func TestRegisterProbe(t *testing.T) {
@@ -50,10 +50,10 @@ func TestRegisterBuffers(t *testing.T) {
 
 	n := 10
 	buf := make([][]byte, n)
-	iovec := make([]syscall.Iovec, n)
+	iovec := make([]unix.Iovec, n)
 	for i := range iovec {
 		buf[i] = make([]byte, 10)
-		iovec[i] = syscall.Iovec{Base: &buf[i][0], Len: 10}
+		iovec[i] = unix.Iovec{Base: &buf[i][0], Len: 10}
 	}
 	require.NoError(t, ring.RegisterBuffers(iovec))
 	require.NoError(t, ring.UnregisterBuffers())
@@ -75,7 +75,7 @@ func TestSetupEventfd(t *testing.T) {
 		_, err := ring.Submit(1)
 		require.NoError(t, err)
 	}
-	rn, err := syscall.Read(int(ring.Eventfd()), buf[:])
+	rn, err := unix.Read(int(ring.Eventfd()), buf[:])
 	require.NoError(t, err)
 	require.Equal(t, len(buf), rn)
 

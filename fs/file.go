@@ -2,12 +2,12 @@ package fs
 
 import (
 	"sync"
-	"syscall"
 	"unsafe"
 
 	"github.com/anadav/uring"
 	"github.com/anadav/uring/fixed"
 	"github.com/anadav/uring/loop"
+	"golang.org/x/sys/unix"
 )
 
 func ioRst(cqe uring.CQEntry, err error) (int, error) {
@@ -15,7 +15,7 @@ func ioRst(cqe uring.CQEntry, err error) (int, error) {
 		return 0, err
 	}
 	if cqe.Result() < 0 {
-		return 0, syscall.Errno(-cqe.Result())
+		return 0, unix.Errno(-cqe.Result())
 	}
 	return int(cqe.Result()), nil
 }
@@ -58,7 +58,7 @@ func (f *File) Close() error {
 		return err
 	}
 	if cqe.Result() < 0 {
-		return syscall.Errno(-cqe.Result())
+		return unix.Errno(-cqe.Result())
 	}
 	return nil
 }
@@ -68,7 +68,7 @@ func (f *File) WriteAt(buf []byte, off int64) (int, error) {
 	if len(buf) == 0 {
 		return 0, nil
 	}
-	iovec := []syscall.Iovec{{Base: &buf[0], Len: uint64(len(buf))}}
+	iovec := []unix.Iovec{{Base: &buf[0], Len: uint64(len(buf))}}
 	return ioRst(f.lp.Syscall(func(sqe *uring.SQEntry) {
 		uring.Writev(sqe, f.ufd, iovec, uint64(off), 0)
 		sqe.SetFlags(f.flags)
@@ -80,7 +80,7 @@ func (f *File) ReadAt(buf []byte, off int64) (int, error) {
 	if len(buf) == 0 {
 		return 0, nil
 	}
-	iovec := []syscall.Iovec{{Base: &buf[0], Len: uint64(len(buf))}}
+	iovec := []unix.Iovec{{Base: &buf[0], Len: uint64(len(buf))}}
 	return ioRst(f.lp.Syscall(func(sqe *uring.SQEntry) {
 		uring.Readv(sqe, f.ufd, iovec, uint64(off), 0)
 		sqe.SetFlags(f.flags)
@@ -121,7 +121,7 @@ func (f *File) Sync() error {
 		return err
 	}
 	if cqe.Result() < 0 {
-		return syscall.Errno(-cqe.Result())
+		return unix.Errno(-cqe.Result())
 	}
 	return nil
 }
@@ -135,7 +135,7 @@ func (f *File) Datasync() error {
 		return err
 	}
 	if cqe.Result() < 0 {
-		return syscall.Errno(-cqe.Result())
+		return unix.Errno(-cqe.Result())
 	}
 	return nil
 }

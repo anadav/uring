@@ -2,8 +2,9 @@ package uring
 
 import (
 	"sync/atomic"
-	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 // sqRing ...
@@ -83,7 +84,7 @@ type Ring struct {
 	eventfd uintptr
 }
 
-// Fd is a io_uring fd returned from IO_URING_SETUP syscall.
+// Fd is a io_uring fd returned from IO_URING_SETUP unix.
 func (r *Ring) Fd() uintptr {
 	return uintptr(r.fd)
 }
@@ -161,10 +162,10 @@ func (r *Ring) Submit(minComplete uint32) (uint32, error) {
 	return r.Enter(r.Flush(), minComplete)
 }
 
-// GetCQEntry returns entry from completion queue, performing IO_URING_ENTER syscall if necessary.
+// GetCQEntry returns entry from completion queue, performing IO_URING_ENTER unix if necessary.
 // CQE is copied from mmaped region to avoid additional sync step after CQE was consumed.
-// syscall.EAGAIN will be returned if there are no completed entries and minComplete is 0.
-// syscall.EINTR will be returned if IO_URING_ENTER was interrupted while waiting for completion.
+// unix.EAGAIN will be returned if there are no completed entries and minComplete is 0.
+// unix.EINTR will be returned if IO_URING_ENTER was interrupted while waiting for completion.
 func (r *Ring) GetCQEntry(minComplete uint32) (CQEntry, error) {
 	needs := r.cqNeedsEnter()
 	if needs {
@@ -188,18 +189,18 @@ func (r *Ring) GetCQEntry(minComplete uint32) (CQEntry, error) {
 		}
 		exit = true
 	}
-	return CQEntry{}, syscall.EAGAIN
+	return CQEntry{}, unix.EAGAIN
 }
 
 func (r *Ring) enter(submitted, minComplete, flags uint32, raw bool) (uint32, error) {
 	var (
 		r1    uintptr
-		errno syscall.Errno
+		errno unix.Errno
 	)
 	if raw {
-		r1, _, errno = syscall.RawSyscall6(IO_URING_ENTER, uintptr(r.fd), uintptr(submitted), uintptr(minComplete), uintptr(flags), 0, 0)
+		r1, _, errno = unix.RawSyscall6(IO_URING_ENTER, uintptr(r.fd), uintptr(submitted), uintptr(minComplete), uintptr(flags), 0, 0)
 	} else {
-		r1, _, errno = syscall.Syscall6(IO_URING_ENTER, uintptr(r.fd), uintptr(submitted), uintptr(minComplete), uintptr(flags), 0, 0)
+		r1, _, errno = unix.Syscall6(IO_URING_ENTER, uintptr(r.fd), uintptr(submitted), uintptr(minComplete), uintptr(flags), 0, 0)
 	}
 	if errno == 0 {
 		return uint32(r1), nil

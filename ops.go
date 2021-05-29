@@ -1,7 +1,6 @@
 package uring
 
 import (
-	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
@@ -29,7 +28,7 @@ func Read(sqe *SQEntry, fd uintptr, buf []byte) {
 }
 
 // Writev ...
-func Writev(sqe *SQEntry, fd uintptr, iovec []syscall.Iovec, offset uint64, flags uint32) {
+func Writev(sqe *SQEntry, fd uintptr, iovec []unix.Iovec, offset uint64, flags uint32) {
 	sqe.opcode = IORING_OP_WRITEV
 	sqe.fd = int32(fd)
 	sqe.len = uint32(len(iovec))
@@ -39,7 +38,7 @@ func Writev(sqe *SQEntry, fd uintptr, iovec []syscall.Iovec, offset uint64, flag
 }
 
 // Readv
-func Readv(sqe *SQEntry, fd uintptr, iovec []syscall.Iovec, offset uint64, flags uint32) {
+func Readv(sqe *SQEntry, fd uintptr, iovec []unix.Iovec, offset uint64, flags uint32) {
 	sqe.opcode = IORING_OP_READV
 	sqe.fd = int32(fd)
 	sqe.len = uint32(len(iovec))

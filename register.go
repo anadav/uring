@@ -1,8 +1,9 @@
 package uring
 
 import (
-	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -25,7 +26,7 @@ const (
 )
 
 const (
-	// probeOpsSize is uintptr so that it can be passed to syscall without casting
+	// probeOpsSize is uintptr so that it can be passed to unix without casting
 	probeOpsSize = uintptr(IORING_OP_LAST) + 1
 )
 
@@ -60,14 +61,14 @@ type ProbeOp struct {
 // RegisterProbe ...
 func (r *Ring) RegisterProbe(probe *Probe) error {
 	for {
-		_, _, errno := syscall.Syscall6(
+		_, _, errno := unix.Syscall6(
 			IO_URING_REGISTER,
 			uintptr(r.fd),
 			IORING_REGISTER_PROBE,
 			uintptr(unsafe.Pointer(probe)),
 			probeOpsSize, 0, 0)
 		if errno > 0 {
-			if errno == syscall.EINTR {
+			if errno == unix.EINTR {
 				continue
 			}
 			return errno
@@ -79,14 +80,14 @@ func (r *Ring) RegisterProbe(probe *Probe) error {
 // RegisterFiles ...
 func (r *Ring) RegisterFiles(fds []int32) error {
 	for {
-		_, _, errno := syscall.Syscall6(
+		_, _, errno := unix.Syscall6(
 			IO_URING_REGISTER,
 			uintptr(r.fd),
 			IORING_REGISTER_FILES,
 			uintptr(unsafe.Pointer(&fds[0])),
 			uintptr(len(fds)), 0, 0)
 		if errno > 0 {
-			if errno == syscall.EINTR {
+			if errno == unix.EINTR {
 				continue
 			}
 			return errno
@@ -98,13 +99,13 @@ func (r *Ring) RegisterFiles(fds []int32) error {
 // UnregisterFiles ...
 func (r *Ring) UnregisterFiles() error {
 	for {
-		_, _, errno := syscall.Syscall6(
+		_, _, errno := unix.Syscall6(
 			IO_URING_REGISTER,
 			uintptr(r.fd),
 			IORING_UNREGISTER_FILES,
 			0, 0, 0, 0)
 		if errno > 0 {
-			if errno == syscall.EINTR {
+			if errno == unix.EINTR {
 				continue
 			}
 			return errno
@@ -120,14 +121,14 @@ func (r *Ring) UpdateFiles(fds []int32, off uint32) error {
 		Fds:    &fds[0],
 	}
 	for {
-		_, _, errno := syscall.Syscall6(
+		_, _, errno := unix.Syscall6(
 			IO_URING_REGISTER,
 			uintptr(r.fd),
 			IORING_REGISTER_FILES_UPDATE,
 			uintptr(unsafe.Pointer(&update)),
 			uintptr(len(fds)), 0, 0)
 		if errno > 0 {
-			if errno == syscall.EINTR {
+			if errno == unix.EINTR {
 				continue
 			}
 			return errno
@@ -137,19 +138,19 @@ func (r *Ring) UpdateFiles(fds []int32, off uint32) error {
 }
 
 // RegisterBuffers ...
-func (r *Ring) RegisterBuffers(iovec []syscall.Iovec) error {
+func (r *Ring) RegisterBuffers(iovec []unix.Iovec) error {
 	if len(iovec) == 0 {
 		return nil
 	}
 	for {
-		_, _, errno := syscall.Syscall6(
+		_, _, errno := unix.Syscall6(
 			IO_URING_REGISTER,
 			uintptr(r.fd),
 			IORING_REGISTER_BUFFERS,
 			uintptr(unsafe.Pointer(&iovec[0])),
 			uintptr(len(iovec)), 0, 0)
 		if errno > 0 {
-			if errno == syscall.EINTR {
+			if errno == unix.EINTR {
 				continue
 			}
 			return errno
@@ -161,13 +162,13 @@ func (r *Ring) RegisterBuffers(iovec []syscall.Iovec) error {
 // UnregisterBuffers ...
 func (r *Ring) UnregisterBuffers() error {
 	for {
-		_, _, errno := syscall.Syscall6(
+		_, _, errno := unix.Syscall6(
 			IO_URING_REGISTER,
 			uintptr(r.fd),
 			IORING_UNREGISTER_BUFFERS,
 			0, 0, 0, 0)
 		if errno > 0 {
-			if errno == syscall.EINTR {
+			if errno == unix.EINTR {
 				continue
 			}
 			return errno
@@ -179,16 +180,16 @@ func (r *Ring) UnregisterBuffers() error {
 // SetupEventfd creates eventfd and registers it with current uring instance.
 func (r *Ring) SetupEventfd() error {
 	if r.eventfd == 0 {
-		r0, _, errno := syscall.Syscall(syscall.SYS_EVENTFD2, 0, 0, 0)
+		r0, _, errno := unix.Syscall(unix.SYS_EVENTFD2, 0, 0, 0)
 		if errno > 0 {
 			return errno
 		}
 		r.eventfd = r0
 	}
 	for {
-		_, _, errno := syscall.Syscall6(IO_URING_REGISTER, uintptr(r.fd), IORING_REGISTER_EVENTFD, uintptr(unsafe.Pointer(&r.eventfd)), 1, 0, 0)
+		_, _, errno := unix.Syscall6(IO_URING_REGISTER, uintptr(r.fd), IORING_REGISTER_EVENTFD, uintptr(unsafe.Pointer(&r.eventfd)), 1, 0, 0)
 		if errno > 0 {
-			if errno == syscall.EINTR {
+			if errno == unix.EINTR {
 				continue
 			}
 			_ = r.CloseEventfd()
@@ -203,14 +204,14 @@ func (r *Ring) CloseEventfd() error {
 	if r.eventfd == 0 {
 		return nil
 	}
-	var errno syscall.Errno
+	var errno unix.Errno
 	for {
-		_, _, errno = syscall.Syscall6(IO_URING_REGISTER, uintptr(r.fd), IORING_UNREGISTER_EVENTFD, 0, 0, 0, 0)
-		if errno != syscall.EINTR {
+		_, _, errno = unix.Syscall6(IO_URING_REGISTER, uintptr(r.fd), IORING_UNREGISTER_EVENTFD, 0, 0, 0, 0)
+		if errno != unix.EINTR {
 			break
 		}
 	}
-	if err := syscall.Close(int(r.eventfd)); err != nil {
+	if err := unix.Close(int(r.eventfd)); err != nil {
 		return err
 	}
 	r.eventfd = 0

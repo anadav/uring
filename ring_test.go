@@ -4,11 +4,11 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
-	"syscall"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 )
 
 func TestWritev(t *testing.T) {
@@ -22,14 +22,14 @@ func TestWritev(t *testing.T) {
 
 	var offset uint64
 	bufs := [4][8]byte{}
-	vectors := [4][]syscall.Iovec{}
+	vectors := [4][]unix.Iovec{}
 
 	for round := 0; round < 10; round++ {
 		for i := 0; i < 4; i++ {
 			buf := bufs[i]
 			_, _ = rand.Read(buf[:])
 			bufs[i] = buf
-			vectors[i] = []syscall.Iovec{
+			vectors[i] = []unix.Iovec{
 				{
 					Base: &buf[0],
 					Len:  uint64(len(buf)),
@@ -46,7 +46,7 @@ func TestWritev(t *testing.T) {
 		for i := 0; i < 4; i++ {
 			cqe, err := ring.GetCQEntry(0)
 			require.NoError(t, err)
-			require.True(t, cqe.Result() >= 0, "failed with %v", syscall.Errno(-cqe.Result()))
+			require.True(t, cqe.Result() >= 0, "failed with %v", unix.Errno(-cqe.Result()))
 		}
 
 		buf := [8]byte{}
@@ -71,7 +71,7 @@ func TestReadv(t *testing.T) {
 	var offset uint64
 	const num = 3
 	bufs := [num][8]byte{}
-	vectors := [num][]syscall.Iovec{}
+	vectors := [num][]unix.Iovec{}
 
 	for round := 0; round < 10; round++ {
 
@@ -84,7 +84,7 @@ func TestReadv(t *testing.T) {
 
 		for i := 0; i < num; i++ {
 			sqe := ring.GetSQEntry()
-			vectors[i] = []syscall.Iovec{
+			vectors[i] = []unix.Iovec{
 				{
 					Base: &bufs[i][0],
 					Len:  uint64(len(bufs[i])),
@@ -100,7 +100,7 @@ func TestReadv(t *testing.T) {
 		for i := 0; i < num; i++ {
 			cqe, err := ring.GetCQEntry(0)
 			require.NoError(t, err)
-			require.Equal(t, len(bufs[i]), int(cqe.Result()), "failed with %v", syscall.Errno(-cqe.Result()))
+			require.Equal(t, len(bufs[i]), int(cqe.Result()), "failed with %v", unix.Errno(-cqe.Result()))
 			require.Equal(t, wbuf[i*8:(i+1)*8], bufs[i][:])
 		}
 	}
@@ -129,7 +129,7 @@ func TestCopy(t *testing.T) {
 
 	reuse := [32]byte{}
 	rlth := uint64(len(reuse))
-	vector := []syscall.Iovec{
+	vector := []unix.Iovec{
 		{
 			Base: &reuse[0],
 			Len:  rlth,
@@ -151,7 +151,7 @@ func TestCopy(t *testing.T) {
 
 		rcqe, err := ring.GetCQEntry(0)
 		require.NoError(t, err)
-		require.True(t, rcqe.Result() >= 0, "read result %d ('%v')", rcqe.Result(), syscall.Errno(-rcqe.Result()))
+		require.True(t, rcqe.Result() >= 0, "read result %d ('%v')", rcqe.Result(), unix.Errno(-rcqe.Result()))
 
 		ret := rcqe.Result()
 		if ret == 0 {
@@ -160,7 +160,7 @@ func TestCopy(t *testing.T) {
 
 		wcqe, err := ring.GetCQEntry(0)
 		require.NoError(t, err)
-		require.Equal(t, ret, wcqe.Result(), "write result %d ('%v')", wcqe.Result(), syscall.Errno(-wcqe.Result()))
+		require.Equal(t, ret, wcqe.Result(), "write result %d ('%v')", wcqe.Result(), unix.Errno(-wcqe.Result()))
 
 		offset += rlth
 	}
@@ -260,7 +260,7 @@ func TestReadWriteFixed(t *testing.T) {
 
 	data := []byte("ping")
 	resp := make([]byte, len(data))
-	iovec := []syscall.Iovec{
+	iovec := []unix.Iovec{
 		{
 			Base: &data[0],
 			Len:  uint64(len(data)),
@@ -280,7 +280,7 @@ func TestReadWriteFixed(t *testing.T) {
 
 	cqe, err := ring.GetCQEntry(1)
 	require.NoError(t, err)
-	require.Equal(t, int32(len(data)), cqe.Result(), syscall.Errno(-cqe.Result()))
+	require.Equal(t, int32(len(data)), cqe.Result(), unix.Errno(-cqe.Result()))
 
 	out := make([]byte, len(data))
 	_, err = f.ReadAt(out, 0)
@@ -298,7 +298,7 @@ func TestReadWriteFixed(t *testing.T) {
 
 	cqe, err = ring.GetCQEntry(1)
 	require.NoError(t, err)
-	require.Equal(t, int32(len(data)), cqe.Result(), syscall.Errno(-cqe.Result()))
+	require.Equal(t, int32(len(data)), cqe.Result(), unix.Errno(-cqe.Result()))
 
 	require.Equal(t, in, resp)
 }
@@ -310,11 +310,11 @@ func TestIOPoll(t *testing.T) {
 
 	// returns immediatly
 	_, err = ring.GetCQEntry(0)
-	require.Error(t, syscall.EAGAIN, err)
+	require.Error(t, unix.EAGAIN, err)
 
 	// returns once consumed scheduler time slice
 	_, err = ring.GetCQEntry(1)
-	require.Error(t, syscall.EAGAIN, err)
+	require.Error(t, unix.EAGAIN, err)
 
 	// TODO IOPOLL currently not supported on my devices
 }

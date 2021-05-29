@@ -2,11 +2,11 @@ package fs
 
 import (
 	"os"
-	"syscall"
 	"unsafe"
 
 	"github.com/anadav/uring"
 	"github.com/anadav/uring/loop"
+	"golang.org/x/sys/unix"
 )
 
 const _AT_FDCWD int32 = -0x64
@@ -16,7 +16,7 @@ type FilesystemOption func(*Filesystem)
 
 // RegisterFiles enables file registration in uring when file is opened.
 // n is a hint to for fds slice allocation. When fds slice needs to grow
-// registration module will have to perform two syscalls (unregister files, register files).
+// registration module will have to perform two unixs (unregister files, register files).
 func RegisterFiles(n int) FilesystemOption {
 	return func(fsm *Filesystem) {
 		fsm.fixedFiles = newFixedFiles(fsm.lp, n)
@@ -41,7 +41,7 @@ type Filesystem struct {
 
 // Open a file.
 func (fsm *Filesystem) Open(name string, flags int, mode os.FileMode) (*File, error) {
-	_p0, err := syscall.BytePtrFromString(name)
+	_p0, err := unix.BytePtrFromString(name)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (fsm *Filesystem) Open(name string, flags int, mode os.FileMode) (*File, er
 		return nil, err
 	}
 	if cqe.Result() < 0 {
-		return nil, syscall.Errno(-cqe.Result())
+		return nil, unix.Errno(-cqe.Result())
 	}
 
 	fd := uintptr(cqe.Result())

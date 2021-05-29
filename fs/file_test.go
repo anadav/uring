@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"testing"
 	"time"
 	"unsafe"
@@ -348,7 +347,7 @@ func TestClose(t *testing.T) {
 	require.NoError(t, f.Close())
 	buf := []byte{1, 2}
 	_, err = f.WriteAt(buf, 0)
-	require.Equal(t, syscall.EBADF, err)
+	require.Equal(t, unix.EBADF, err)
 }
 
 func TestConcurrentWritesIntegrity(t *testing.T) {

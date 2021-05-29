@@ -5,10 +5,10 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/anadav/uring"
+	"golang.org/x/sys/unix"
 )
 
 var (
@@ -182,7 +182,7 @@ func (q *queue) completionLoop() {
 func (q *queue) tryComplete() bool {
 	cqe, err := q.ring.GetCQEntry(q.minComplete)
 	// EAGAIN - if head is equal to tail of completion queue
-	if err == syscall.EAGAIN || err == syscall.EINTR {
+	if err == unix.EAGAIN || err == unix.EINTR {
 		// gosched is needed if q.minComplete = 0 without eventfd
 		runtime.Gosched()
 		return true

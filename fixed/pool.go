@@ -4,13 +4,14 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 // BufferRegistry ...
 type BufferRegistry interface {
-	RegisterBuffers([]syscall.Iovec) error
+	RegisterBuffers([]unix.Iovec) error
 }
 
 var bufferPool = sync.Pool{

@@ -2,8 +2,9 @@ package uring
 
 import (
 	"fmt"
-	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -23,7 +24,7 @@ func Setup(size uint, params *IOUringParams) (*Ring, error) {
 }
 
 func setup(ring *Ring, size uint, p *IOUringParams) error {
-	fd, _, errno := syscall.Syscall(IO_URING_SETUP, uintptr(size), uintptr(unsafe.Pointer(p)), 0)
+	fd, _, errno := unix.Syscall(IO_URING_SETUP, uintptr(size), uintptr(unsafe.Pointer(p)), 0)
 	if errno != 0 {
 		return fmt.Errorf("IO_URING_SETUP %w", error(errno))
 	}
@@ -38,9 +39,9 @@ func setup(ring *Ring, size uint, p *IOUringParams) error {
 		}
 	}
 
-	data, err := syscall.Mmap(int(fd), IORING_OFF_SQ_RING, int(sqsize),
-		syscall.PROT_READ|syscall.PROT_WRITE,
-		syscall.MAP_SHARED|syscall.MAP_POPULATE)
+	data, err := unix.Mmap(int(fd), IORING_OFF_SQ_RING, int(sqsize),
+		unix.PROT_READ|unix.PROT_WRITE,
+		unix.MAP_SHARED|unix.MAP_POPULATE)
 	if err != nil {
 		return err
 	}
@@ -56,9 +57,9 @@ func setup(ring *Ring, size uint, p *IOUringParams) error {
 	ring.sq.array = uint32Array(unsafe.Pointer(uintptr(pointer) + uintptr(p.SQOff.Array)))
 
 	if !isSingleMap {
-		data, err = syscall.Mmap(int(fd), IORING_OFF_CQ_RING, int(cqsize),
-			syscall.PROT_READ|syscall.PROT_WRITE,
-			syscall.MAP_SHARED|syscall.MAP_POPULATE)
+		data, err = unix.Mmap(int(fd), IORING_OFF_CQ_RING, int(cqsize),
+			unix.PROT_READ|unix.PROT_WRITE,
+			unix.MAP_SHARED|unix.MAP_POPULATE)
 		if err != nil {
 			return err
 		}
@@ -76,10 +77,10 @@ func setup(ring *Ring, size uint, p *IOUringParams) error {
 		ring.cq.flags = (*uint32)(unsafe.Pointer(uintptr(pointer) + uintptr(p.CQOff.Flags)))
 	}
 
-	entries, err := syscall.Mmap(int(fd), IORING_OFF_SQES,
+	entries, err := unix.Mmap(int(fd), IORING_OFF_SQES,
 		int(p.SQEntries)*int(sqeSize),
-		syscall.PROT_READ|syscall.PROT_WRITE,
-		syscall.MAP_SHARED|syscall.MAP_POPULATE)
+		unix.PROT_READ|unix.PROT_WRITE,
+		unix.MAP_SHARED|unix.MAP_POPULATE)
 
 	if err != nil {
 		return err
@@ -91,7 +92,7 @@ func setup(ring *Ring, size uint, p *IOUringParams) error {
 
 func (r *Ring) Close() (err error) {
 	if r.cqData != nil {
-		ret := syscall.Munmap(r.cqData)
+		ret := unix.Munmap(r.cqData)
 		if err == nil {
 			err = ret
 		}
@@ -100,7 +101,7 @@ func (r *Ring) Close() (err error) {
 		}
 	}
 	if r.sqData != nil {
-		ret := syscall.Munmap(r.sqData)
+		ret := unix.Munmap(r.sqData)
 		if err == nil {
 			err = ret
 		}
@@ -109,7 +110,7 @@ func (r *Ring) Close() (err error) {
 		}
 	}
 	if r.sqArrayData != nil {
-		ret := syscall.Munmap(r.sqArrayData)
+		ret := unix.Munmap(r.sqArrayData)
 		if err == nil {
 			err = ret
 		}
@@ -118,7 +119,7 @@ func (r *Ring) Close() (err error) {
 		}
 	}
 	if r.fd != 0 {
-		ret := syscall.Close(r.fd)
+		ret := unix.Close(r.fd)
 		if err == nil {
 			err = ret
 		}

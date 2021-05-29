@@ -5,8 +5,9 @@ import (
 	"io/ioutil"
 	"os"
 	"sync"
-	"syscall"
 	"testing"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/anadav/uring"
 	"github.com/anadav/uring/loop"
@@ -35,7 +36,7 @@ func TestWrite(t *testing.T) {
 				uring.WriteFixed(sqe, f.Fd(), buf.Base(), buf.Len(), 0, 0, buf.Index())
 			})
 			require.NoError(t, err)
-			require.Equal(t, int32(10), cqe.Result(), syscall.Errno(-cqe.Result()))
+			require.Equal(t, int32(10), cqe.Result(), unix.Errno(-cqe.Result()))
 		}
 	}
 	// run it couple of times to test that buffers are reused correctly

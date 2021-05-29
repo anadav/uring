@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"runtime"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/anadav/uring"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -29,7 +29,7 @@ const (
 	FlagSharedWorkers = 1 << iota
 
 	// FlagBatchSubmission enables feature to batch individual submission together
-	// in one syscall. If this flag is set SubmissionTimer option must be set as well.
+	// in one unix. If this flag is set SubmissionTimer option must be set as well.
 	FlagBatchSubmission
 )
 
@@ -146,7 +146,7 @@ func setupSharded(q *Loop, size uint, params *uring.IOUringParams) (err error) {
 			for {
 				err = ring.SetupEventfd()
 				if err != nil {
-					if err == syscall.EINTR {
+					if err == unix.EINTR {
 						continue
 					}
 					err = fmt.Errorf("failed to setup eventfd %w", err)
@@ -194,7 +194,7 @@ func (q *Loop) getQueue() *queue {
 	if len(q.queues) == 1 {
 		return q.queues[0]
 	}
-	tid := uint64(syscall.Gettid())
+	tid := uint64(unix.Gettid())
 	return q.queues[tid%q.n]
 }
 
@@ -217,9 +217,9 @@ func (q *Loop) BatchSyscall(cqes []uring.CQEntry, opts []SQOperation, ptrs ...ui
 // tests for Register* methods are in fixed and fs modules.
 
 // RegisterBuffers will register buffers on all rings (shards). Note that registration
-// is done with syscall, and will have to wait until rings are idle.
+// is done with unix, and will have to wait until rings are idle.
 // TODO test if IORING_OP_PROVIDE_BUFFERS is supported (5.7?)
-func (q *Loop) RegisterBuffers(iovec []syscall.Iovec) (err error) {
+func (q *Loop) RegisterBuffers(iovec []unix.Iovec) (err error) {
 	for _, subq := range q.queues {
 		err = subq.Ring().RegisterBuffers(iovec)
 		if err != nil {
