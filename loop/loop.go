@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dshulyak/uring"
+	"github.com/anadav/uring"
 )
 
 const (

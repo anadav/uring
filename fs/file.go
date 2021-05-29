@@ -5,9 +5,9 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/dshulyak/uring"
-	"github.com/dshulyak/uring/fixed"
-	"github.com/dshulyak/uring/loop"
+	"github.com/anadav/uring"
+	"github.com/anadav/uring/fixed"
+	"github.com/anadav/uring/loop"
 )
 
 func ioRst(cqe uring.CQEntry, err error) (int, error) {

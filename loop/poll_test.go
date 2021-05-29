@@ -3,7 +3,7 @@ package loop
 import (
 	"testing"
 
-	"github.com/dshulyak/uring"
+	"github.com/anadav/uring"
 	"github.com/stretchr/testify/require"
 )
 

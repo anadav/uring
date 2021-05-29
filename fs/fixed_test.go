@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dshulyak/uring/loop"
+	"github.com/anadav/uring/loop"
 	"github.com/stretchr/testify/require"
 )
 

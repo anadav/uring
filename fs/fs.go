@@ -5,8 +5,8 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/dshulyak/uring"
-	"github.com/dshulyak/uring/loop"
+	"github.com/anadav/uring"
+	"github.com/anadav/uring/loop"
 )
 
 const _AT_FDCWD int32 = -0x64

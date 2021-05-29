@@ -14,9 +14,9 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/dshulyak/uring"
-	"github.com/dshulyak/uring/fixed"
-	"github.com/dshulyak/uring/loop"
+	"github.com/anadav/uring"
+	"github.com/anadav/uring/fixed"
+	"github.com/anadav/uring/loop"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
 )

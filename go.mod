@@ -1,4 +1,4 @@
-module github.com/dshulyak/uring
+module github.com/anadav/uring
 
 go 1.14
 
