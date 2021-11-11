@@ -115,16 +115,19 @@ func (r *Ring) SQSize() uint32 {
 //   ring.Flush()
 //   ring.Enter(1, 0)
 func (r *Ring) GetSQEntry() *SQEntry {
-	head := atomic.LoadUint32(r.sq.head)
+	nEntries := *r.sq.ringEntries
 	next := r.sq.sqeTail + 1
-	if next-head <= *r.sq.ringEntries {
-		idx := r.sq.sqeTail & *r.sq.ringMask
-		r.sq.sqeTail = next
-		sqe := r.sq.sqes.get(idx)
-		sqe.Reset()
-		return sqe
+
+	if next-r.sq.sqeHead > nEntries &&
+		next-atomic.LoadUint32(r.sq.head) > nEntries {
+		return nil
 	}
-	return nil
+
+	idx := r.sq.sqeTail & *r.sq.ringMask
+	r.sq.sqeTail = next
+	sqe := r.sq.sqes.get(idx)
+	sqe.Reset()
+	return sqe
 }
 
 // Flush submission queue.
